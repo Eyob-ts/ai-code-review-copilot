@@ -1,12 +1,9 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
-
-use Tests\TestCase;
 use Database\Seeders\UserSeeder;
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 // 'describe' is used to group related tests
 describe('User Seeder', function () {
@@ -21,7 +18,7 @@ describe('User Seeder', function () {
         // Pest's expectation API: Read it like English.
         // "Expect that the database count for 'users' to be 1"
         expect(DB::table('users')->count())->toBe(1);
-        
+
         // Alternatively, using Laravel's assert helper (still works):
         // $this->assertDatabaseCount('users', 1);
     });
@@ -39,10 +36,10 @@ describe('User Seeder', function () {
 
     it('has a properly hashed password', function () {
         $user = User::first();
-        
+
         // "Expect that Hash::check for 'secret' is true"
         expect(Hash::check('secret', $user->password))->toBeTrue();
-        
+
         // "Expect that Hash::check for 'wrongpassword' is false"
         expect(Hash::check('wrongpassword', $user->password))->toBeFalse();
     });

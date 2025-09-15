@@ -2,40 +2,40 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class DevLoginController extends Controller
 {
-    public function login ()
+    public function login()
     {
         // ✅ Correct spelling: environment
-       $this->ensurelocal();
-       $user = User::where('email', 'john@review.com')->first()
-            ?? User::first();
-        if (!$user) {
+        $this->ensurelocal();
+        $user = User::where('email', 'john@review.com')->first()
+             ?? User::first();
+        if (! $user) {
             return 'No users found. Please create a user first.';
         }
-       Auth::login($user);
-       return redirect('/dashboard')->with('status', "Logged in as {$user->email}");
+        Auth::login($user);
+
+        return redirect('/dashboard')->with('status', "Logged in as {$user->email}");
     }
 
     /**
      * Impersonate any user by ID.
      */
-
     public function impersonate($id)
     {
         $this->ensurelocal();
         $user = User::findOrFail($id);
         Auth::login($user);
+
         return redirect('/dashboard')->with('status', "Now impersonating {$user->email}");
     }
 
     /**
      * Reset and reseed database.
      */
-
     public function resetDb()
     {
         $this->ensurelocal();
@@ -45,12 +45,10 @@ class DevLoginController extends Controller
         return 'Database reset and seeded. <a href="/dashboard">Go to Dashboard</a>';
     }
 
-    private function ensurelocal () 
+    private function ensurelocal()
     {
-        if (!app()->environment('local')) {
+        if (! app()->environment('local')) {
             abort(403, 'Unauthorized.');
         }
     }
-
-
 }
