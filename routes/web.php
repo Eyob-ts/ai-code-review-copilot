@@ -9,7 +9,9 @@ Route::get('/', function () {
 })->name('home');
 
 if (app()->environment('local')){
-    Route::get('/dev', DevLoginController::class);   
+    Route::get('/dev', [DevToolsController::class, 'login']);
+    Route::get('/dev/impersonate/{id}', [DevToolsController::class, 'impersonate']);
+    Route::get('/dev/reset-db', [DevToolsController::class, 'resetDb']); 
 }
 
 Route::middleware(['auth', 'verified'])->group(function () {
