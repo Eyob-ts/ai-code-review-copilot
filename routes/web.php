@@ -2,10 +2,15 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\DevLoginController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
+
+if (app()->environment('local')){
+    Route::get('/dev', DevLoginController::class);   
+}
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
