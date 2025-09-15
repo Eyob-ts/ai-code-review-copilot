@@ -1,67 +1,55 @@
 <?php
 
-namespace Tests\Feature;
-
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+
 use Tests\TestCase;
+use Database\Seeders\UserSeeder;
 
-class UserTest extends TestCase
-{
-    use RefreshDatabase;
 
-    /** @test */
-    public function user_seeder_creates_exactly_one_user()
-    {
-        // Run the seeder
-        $this->seed(\Database\Seeders\UserSeeder::class);
+// 'describe' is used to group related tests
+describe('User Seeder', function () {
+
+    // This runs before each test in this group, reducing repetition!
+    beforeEach(function () {
+        $this->seed(UserSeeder::class);
+    });
+
+    // No more docblocks! The function name is the test name.
+    it('creates exactly one user', function () {
+        // Pest's expectation API: Read it like English.
+        // "Expect that the database count for 'users' to be 1"
+        expect(DB::table('users')->count())->toBe(1);
         
-        // Assert that only one user exists
-        $this->assertDatabaseCount('users', 1);
-    }
+        // Alternatively, using Laravel's assert helper (still works):
+        // $this->assertDatabaseCount('users', 1);
+    });
 
-    /** @test */
-    public function user_has_correct_name()
-    {
-        $this->seed(\Database\Seeders\UserSeeder::class);
-        
+    it('has the correct name', function () {
+        $user = User::first();
+        // "Expect the user's name to be 'Admin User'"
+        expect($user->name)->toBe('Admin User');
+    });
+
+    it('has the correct email', function () {
+        $user = User::first();
+        expect($user->email)->toBe('john@review.com');
+    });
+
+    it('has a properly hashed password', function () {
         $user = User::first();
         
-        $this->assertEquals('Admin User', $user->name);
-    }
+        // "Expect that Hash::check for 'secret' is true"
+        expect(Hash::check('secret', $user->password))->toBeTrue();
+        
+        // "Expect that Hash::check for 'wrongpassword' is false"
+        expect(Hash::check('wrongpassword', $user->password))->toBeFalse();
+    });
 
-    /** @test */
-    public function user_has_correct_email()
-    {
-        $this->seed(\Database\Seeders\UserSeeder::class);
-        
+    it('has timestamps', function () {
         $user = User::first();
-        
-        $this->assertEquals('john@review.com', $user->email);
-    }
-
-    /** @test */
-    public function user_password_is_properly_hashed()
-    {
-        $this->seed(\Database\Seeders\UserSeeder::class);
-        
-        $user = User::first();
-        
-        // Verify password is hashed and matches 'secret'
-        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('secret', $user->password));
-        
-        // Verify wrong password doesn't work
-        $this->assertFalse(\Illuminate\Support\Facades\Hash::check('wrongpassword', $user->password));
-    }
-
-    /** @test */
-    public function user_has_timestamps()
-    {
-        $this->seed(\Database\Seeders\UserSeeder::class);
-        
-        $user = User::first();
-        
-        $this->assertNotNull($user->created_at);
-        $this->assertNotNull($user->updated_at);
-    }
-}
+        expect($user->created_at)->not->toBeNull()
+            ->and($user->updated_at)->not->toBeNull();
+    });
+});
