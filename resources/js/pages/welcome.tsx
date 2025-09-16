@@ -1,6 +1,6 @@
-import { Head, Link, usePage } from '@inertiajs/react';
 import { dashboard, login, register } from '@/routes';
-import type { SharedData } from '@/types';
+import { type SharedData } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/react';
 
 export default function Welcome() {
     const { auth } = usePage<SharedData>().props;
@@ -61,7 +61,6 @@ export default function Welcome() {
                                             href="https://laravel.com/docs"
                                             target="_blank"
                                             className="ml-1 inline-flex items-center space-x-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
-                                            rel="noopener"
                                         >
                                             <span>Documentation</span>
                                             <svg
@@ -93,7 +92,6 @@ export default function Welcome() {
                                             href="https://laracasts.com"
                                             target="_blank"
                                             className="ml-1 inline-flex items-center space-x-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
-                                            rel="noopener"
                                         >
                                             <span>Laracasts</span>
                                             <svg
@@ -120,7 +118,6 @@ export default function Welcome() {
                                         href="https://cloud.laravel.com"
                                         target="_blank"
                                         className="inline-block rounded-sm border border-black bg-[#1b1b18] px-5 py-1.5 text-sm leading-normal text-white hover:border-black hover:bg-black dark:border-[#eeeeec] dark:bg-[#eeeeec] dark:text-[#1C1C1A] dark:hover:border-white dark:hover:bg-white"
-                                        rel="noopener"
                                     >
                                         Deploy now
                                     </a>
