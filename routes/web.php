@@ -17,14 +17,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // GitHub OAuth with Socialite
-
 Route::get('/auth/github', function () {
     return Socialite::driver('github')->redirect();
 })->name('github.login');
 
 Route::get('/auth/github/callback', function () {
     $githubUser = Socialite::driver('github')->user();
-    // ...
+
     // Save or update user in DB
     $user = User::updateOrCreate(
         [
@@ -42,6 +41,11 @@ Route::get('/auth/github/callback', function () {
     // Redirect to dashboard
     return redirect()->route('dashboard');
 });
+
+// 🔹 API route to get the authenticated user (useful for your React frontend)
+Route::get('/api/user', function () {
+    return auth()->user();
+})->middleware('auth');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
