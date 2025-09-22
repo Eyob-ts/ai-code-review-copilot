@@ -8,7 +8,15 @@
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
-        "types": "tsc --noEmit"
+        "types": "tsc --noEmit",
+        "docker:build": "docker-compose build",
+        "docker:up": "docker-compose up -d",
+        "docker:down": "docker-compose down",
+        "docker:restart": "docker-compose restart",
+        "docker:logs": "docker-compose logs -f",
+        "docker:shell": "docker-compose exec app bash",
+        "docker:mysql": "docker-compose exec mysql mysql -u root -p ai_code_review",
+        "docker:redis": "docker-compose exec redis redis-cli"
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",
