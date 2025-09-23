@@ -32,7 +32,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN a2enmod rewrite
 
 # Copy Apache configuration
-COPY docker/nginx/sites/000-default.conf /etc/apache2/sites-available/000-default.conf
+COPY docker/apache/sites/000-default.conf /etc/apache2/sites-available/000-default.conf
 
 # Copy application files
 COPY . /var/www/html
