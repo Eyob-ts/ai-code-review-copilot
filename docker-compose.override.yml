@@ -1,5 +1,4 @@
 services:
-  # override app to use local code for faster iteration (bind mount)
   app:
     build:
       context: .
@@ -15,7 +14,6 @@ services:
     env_file:
       - .env.docker
 
-  # node container for Vite dev server (hot reload)
   node:
     image: node:18-alpine
     working_dir: /var/www/html
@@ -28,7 +26,6 @@ services:
     depends_on:
       - app
 
-  # adminer for DB GUI
   adminer:
     image: adminer:4.17.1
     restart: unless-stopped
@@ -39,7 +36,6 @@ services:
     depends_on:
       - mysql
 
-  # redis commander (dev GUI)
   redis-commander:
     image: rediscommander/redis-commander:1.8.0
     restart: unless-stopped
@@ -50,7 +46,6 @@ services:
     depends_on:
       - redis
 
-  # a queue worker for background jobs (dev convenience)
   worker:
     build:
       context: .
@@ -64,5 +59,7 @@ services:
     depends_on:
       - app
       - redis
-  volumes:
-      - ./node_modules:
+
+# ⚠️ Root-level volumes
+volumes:
+  node_modules: {}
