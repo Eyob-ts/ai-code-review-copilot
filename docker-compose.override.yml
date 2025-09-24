@@ -1,0 +1,68 @@
+services:
+  # override app to use local code for faster iteration (bind mount)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final
+    volumes:
+      - ./:/var/www/html:delegated
+      - ./storage:/var/www/html/storage
+      - ./docker/php/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+    env_file:
+      - .env.docker
+
+  # node container for Vite dev server (hot reload)
+  node:
+    image: node:18-alpine
+    working_dir: /var/www/html
+    command: sh -c "npm ci && npm run dev"
+    volumes:
+      - ./:/var/www/html:delegated
+      - node_modules:/var/www/html/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - app
+
+  # adminer for DB GUI
+  adminer:
+    image: adminer:4.17.1
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+    depends_on:
+      - mysql
+
+  # redis commander (dev GUI)
+  redis-commander:
+    image: rediscommander/redis-commander:1.8.0
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    depends_on:
+      - redis
+
+  # a queue worker for background jobs (dev convenience)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final
+    command: sh -c "php artisan queue:work --sleep=3 --tries=3 --timeout=90"
+    volumes:
+      - ./:/var/www/html:delegated
+    env_file:
+      - .env.docker
+    depends_on:
+      - app
+      - redis
+  volumes:
+      - ./node_modules:

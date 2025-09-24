@@ -1,51 +1,59 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
-# Wait for MySQL to be ready
-echo "Waiting for MySQL to be ready..."
-while ! nc -z mysql 3306; do
-  sleep 1
-done
-echo "MySQL is ready!"
+# ---------- helper: wait for tcp ----------
+wait_for_port() {
+  host="$1"
+  port="$2"
+  echo "Waiting for $host:$port ..."
+  until bash -c "cat < /dev/tcp/$host/$port" >/dev/null 2>&1; do
+    sleep 1
+  done
+  echo "$host:$port is available"
+}
 
-# Wait for Redis to be ready
-echo "Waiting for Redis to be ready..."
-while ! nc -z redis 6379; do
-  sleep 1
-done
-echo "Redis is ready!"
+# Wait for DB and Redis (if set)
+: "${DB_HOST:=mysql}"
+: "${DB_PORT:=3306}"
+wait_for_port "$DB_HOST" "$DB_PORT"
 
-# Generate application key if it doesn't exist
-if [ ! -f .env ]; then
-    echo "Creating .env file from .env.example..."
-    cp .env.example .env
+if [ -n "${REDIS_HOST}" ]; then
+  : "${REDIS_PORT:=6379}"
+  wait_for_port "$REDIS_HOST" "$REDIS_PORT"
 fi
 
-# Generate application key
-php artisan key:generate --force
+# Set permissions (safe defaults)
+chown -R www-data:www-data /var/www/html || true
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache || true
 
-# Clear and cache configuration
-php artisan config:clear
-php artisan config:cache
+# Install composer dependencies if vendor missing (helpful for mounted dev volumes)
+if [ ! -d /var/www/html/vendor ] || [ ! -f /var/www/html/vendor/autoload.php ]; then
+  echo "Vendor not found. Installing composer dependencies..."
+  composer install --no-interaction --prefer-dist --optimize-autoloader
+fi
 
-# Clear and cache routes
-php artisan route:clear
-php artisan route:cache
+# If environment variable says to run migrations/seeders: run them (useful for CI/CD)
+if [ "${APP_RUN_MIGRATIONS:-false}" = "true" ]; then
+  echo "Running migrations..."
+  php artisan migrate --force
+fi
 
-# Clear and cache views
-php artisan view:clear
-php artisan view:cache
+if [ "${APP_SEED:-false}" = "true" ]; then
+  echo "Running seeders..."
+  php artisan db:seed --force
+fi
 
-# Run database migrations
-php artisan migrate --force
+# Cache / config optimizations is optional
+if [ "${APP_OPTIMIZE:-false}" = "true" ]; then
+  echo "Optimizing (config, route, view caches)..."
+  php artisan config:cache && php artisan route:cache && php artisan view:cache || true
+else
+  # keep dev-friendly caches cleared
+  php artisan cache:clear || true
+  php artisan config:clear || true
+  php artisan route:clear || true
+  php artisan view:clear || true
+fi
 
-# Seed database if needed
-# php artisan db:seed --force
-
-# Set proper permissions
-chown -R www-data:www-data /var/www/html/storage
-chown -R www-data:www-data /var/www/html/bootstrap/cache
-chmod -R 755 /var/www/html/storage
-chmod -R 755 /var/www/html/bootstrap/cache
-
-# Start Apache in foreground
-exec apache2-foreground
+# Execute container CMD
+exec "$@"
