@@ -24,8 +24,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # copy composer files only and install PHP deps (speeds up rebuilds)
 COPY composer.json composer.lock /var/www/html/
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
-
+RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts
 # copy application (rest of files)
 COPY . /var/www/html
 
@@ -33,24 +32,22 @@ COPY . /var/www/html
 RUN chown -R www-data:www-data /var/www/html \
  && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-#####################################
-# Stage: node build (build frontend assets) -- optional but included for full image builds
-FROM node:18-alpine AS node_builder
-WORKDIR /app
-# copy only package files first for caching
-COPY package.json package-lock.json /app/
-RUN npm ci --silent
-# copy rest and build
-COPY . /app
-# assume Vite build outputs to /app/public/build (adjust if your project uses different output)
-RUN npm run build
+# Now that the full application (including artisan) is present, run Composer with scripts
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
 #####################################
 # Stage: final runtime (based on base stage to keep installed extensions)
 FROM base AS final
 
-# copy built frontend assets into final image (if any)
-COPY --from=node_builder /app/public /var/www/html/public
+# Install Node.js and npm so we can build frontend where PHP/Artisan exists
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    nodejs npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build frontend assets (Wayfinder calls Artisan, so PHP must be present)
+WORKDIR /var/www/html
+RUN if [ -f package-lock.json ]; then npm ci --silent; else npm install --silent; fi \
+    && npm run build
 
 # copy custom entrypoint
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
@@ -63,3 +60,4 @@ EXPOSE 9000
 USER www-data
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["php-fpm"]
+

@@ -7,7 +7,7 @@ echo "🚀 Starting Laravel Dev Environment..."
 # Step 0: Ensure .env exists
 if [ ! -f ".env" ]; then
   echo "⚙️  No .env file found. Copying from .env.example..."
-  cp .env.example .env
+  cp .env.docker.example .env
 else
   echo "⚙️  .env file already exists, skipping copy."
 fi

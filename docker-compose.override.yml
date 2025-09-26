@@ -12,17 +12,17 @@ services:
       - APP_ENV=local
       - APP_DEBUG=true
     env_file:
-      - .env.docker
+      - .env
 
   node:
     image: node:18-alpine
     working_dir: /var/www/html
-    command: sh -c "npm ci && npm run dev"
     volumes:
       - ./:/var/www/html:delegated
       - node_modules:/var/www/html/node_modules
     ports:
       - "5173:5173"
+    command: sh -c "npm ci && npm run dev"
     depends_on:
       - app
 
@@ -37,7 +37,7 @@ services:
       - mysql
 
   redis-commander:
-    image: rediscommander/redis-commander:1.8.0
+    image: rediscommander/redis-commander:latest
     restart: unless-stopped
     ports:
       - "8081:8081"
@@ -55,7 +55,7 @@ services:
     volumes:
       - ./:/var/www/html:delegated
     env_file:
-      - .env.docker
+      - .env
     depends_on:
       - app
       - redis

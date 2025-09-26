@@ -20,6 +20,13 @@ wait_for_port "$DB_HOST" "$DB_PORT"
 if [ -n "${REDIS_HOST}" ]; then
   : "${REDIS_PORT:=6379}"
   wait_for_port "$REDIS_HOST" "$REDIS_PORT"
+  #Additional Redis readiness check
+  echo "Testing Redis connection...."
+  until redis-cli -h "REDIS_HOST" -p "REDIS_PORT" ping | grep -q PONG; do
+    echo "Redis not ready yet, waiting..."
+    sleep 1
+    done
+    echo "Redis is ready!"
 fi
 
 # Set permissions (safe defaults)
@@ -56,4 +63,5 @@ else
 fi
 
 # Execute container CMD
+echo "Starting PHP-FPM..."
 exec "$@"
