@@ -34,7 +34,7 @@ fi
 # Step 4: Install Node dependencies (if node_modules/ missing)
 if [ ! -d "node_modules" ]; then
   echo "📦 Installing Node dependencies..."
-  docker compose exec -T node npm install
+  docker compose exec -T app npm install
 else
   echo "📦 node_modules directory already exists, skipping npm install."
 fi
@@ -64,7 +64,8 @@ docker compose exec -T app php artisan view:cache || true
 
 # Step 8: Start Vite dev server
 echo "🎨 Starting Vite (hot reload)..."
-docker compose exec -T node npm run dev &
+docker compose exec -T app npm run dev &
+
 
 echo ""
 echo "✅ Laravel Dev Environment is ready!"

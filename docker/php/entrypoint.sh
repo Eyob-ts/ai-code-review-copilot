@@ -6,7 +6,7 @@ wait_for_port() {
   host="$1"
   port="$2"
   echo "Waiting for $host:$port ..."
-  until bash -c "cat < /dev/tcp/$host/$port" >/dev/null 2>&1; do
+  until nc -z "$host" "$port" 2>/dev/null; do
     sleep 1
   done
   echo "$host:$port is available"
@@ -20,13 +20,7 @@ wait_for_port "$DB_HOST" "$DB_PORT"
 if [ -n "${REDIS_HOST}" ]; then
   : "${REDIS_PORT:=6379}"
   wait_for_port "$REDIS_HOST" "$REDIS_PORT"
-  #Additional Redis readiness check
-  echo "Testing Redis connection...."
-  until redis-cli -h "REDIS_HOST" -p "REDIS_PORT" ping | grep -q PONG; do
-    echo "Redis not ready yet, waiting..."
-    sleep 1
-    done
-    echo "Redis is ready!"
+  echo "Redis connection available at $REDIS_HOST:$REDIS_PORT"
 fi
 
 # Set permissions (safe defaults)
@@ -48,6 +42,12 @@ fi
 if [ "${APP_SEED:-false}" = "true" ]; then
   echo "Running seeders..."
   php artisan db:seed --force
+fi
+
+# Generate wayfinder types if the package is installed
+if grep -q "laravel/vite-plugin-wayfinder" /var/www/html/composer.lock; then
+  echo "Generating wayfinder types..."
+  php artisan wayfinder:generate --with-form
 fi
 
 # Cache / config optimizations is optional

@@ -1,63 +1,75 @@
-# Dockerfile (production multi-stage)
-#####################################
-# Stage: base (install extensions, composer, composer deps)
+# =============================
+# 1️⃣ Base PHP Image
+# =============================
 FROM php:8.2-fpm AS base
 
-# set working dir
 WORKDIR /var/www/html
 
-# system deps required for many PHP extensions & common tools
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+# Install system dependencies
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     git curl zip unzip libpng-dev libonig-dev libxml2-dev libzip-dev \
-    libjpeg-dev libfreetype6-dev procps bash ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    libjpeg-dev libfreetype6-dev procps bash ca-certificates redis-tools \
+    netcat-openbsd \
+    nodejs npm \
+ && rm -rf /var/lib/apt/lists/*
 
-# Configure & install PHP extensions
+# PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
  && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
-# redis extension
+# Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
 
-# copy composer binary from official image
+# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# copy composer files only and install PHP deps (speeds up rebuilds)
-COPY composer.json composer.lock /var/www/html/
-RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts
-# copy application (rest of files)
-COPY . /var/www/html
+# =============================
+# 2️⃣ Composer Dependencies
+# =============================
+FROM base AS composer_deps
 
-# ensure permissions for Laravel folders (runtime will also enforce)
-RUN chown -R www-data:www-data /var/www/html \
- && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
-# Now that the full application (including artisan) is present, run Composer with scripts
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+# =============================
+# 3️⃣ Frontend Build (PHP + Node)
+# =============================
+FROM base AS frontend
 
-#####################################
-# Stage: final runtime (based on base stage to keep installed extensions)
+WORKDIR /var/www/html
+COPY . .
+RUN npm ci && npm run build
+
+# =============================
+# 4️⃣ Final Runtime Image
+# =============================
 FROM base AS final
 
-# Install Node.js and npm so we can build frontend where PHP/Artisan exists
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    nodejs npm \
-    && rm -rf /var/lib/apt/lists/*
-
-# Build frontend assets (Wayfinder calls Artisan, so PHP must be present)
 WORKDIR /var/www/html
-RUN if [ -f package-lock.json ]; then npm ci --silent; else npm install --silent; fi \
-    && npm run build
 
-# copy custom entrypoint
+# Copy vendor deps
+COPY --from=composer_deps /var/www/html/vendor ./vendor
+
+# Copy application files
+COPY . .
+
+# Copy built assets
+COPY --from=frontend /var/www/html/public/build ./public/build
+
+# Optimize autoload and discover packages
+RUN composer dump-autoload --optimize && php artisan package:discover
+
+RUN chown -R www-data:www-data /var/www/html \
+ && chmod -R 775 storage bootstrap/cache
+
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# expose PHP-FPM port (nginx will connect to this)
 EXPOSE 9000
 
-# runtime user & default command
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:9000 || exit 1
+
 USER www-data
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["php-fpm"]
-

@@ -7,7 +7,7 @@ services:
     volumes:
       - ./:/var/www/html:delegated
       - ./storage:/var/www/html/storage
-      - ./docker/php/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
+      # REMOVED: - ./docker/php/entrypoint-fixed.sh:/usr/local/bin/entrypoint.sh:ro
     environment:
       - APP_ENV=local
       - APP_DEBUG=true
